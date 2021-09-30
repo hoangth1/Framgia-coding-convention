@@ -1,94 +1,114 @@
-## Framgia Git flow
+# Git Flow
 
-Flow tham khảo: [A successful Git branching model](http://nvie.com/posts/a-successful-git-branching-model/)
+## 1. Quản lý branch
 
-### Giả định
-* Đã tạo Central Repository (Nguồn trung tâm) trên Github（hoặc Bitbucket）。
-* Branch mặc định của Central Repository là master。
-* Lập trình viên có thể  fork (tạo nhánh) đối với Central Repository。
-* Đã quyết định người review và người có quyền merge。
+### 1.1 Các branch chính
+   
+   * main
+       - Đây là branch ổn định nhất và chứa code của phiên bản mới nhất đã được release lên production. Sau khi một phiên bản được release code sẽ merge vào branch này để đảm bảo rằng code ở branch này là code của phiên bản mới nhất.
+  * develop
+    - Nhánh này sẽ chứa source code mới nhất đến thời điểm hiện tại phục vụ việc release ở phiên bản tiếp theo.
 
-### Nguyên tắc
-* Mỗi pull-request tương ứng với một ticket và chỉ có một commit trong đó。
-* Nội dung của commit là `refs [Loại ticket] #[Số ticket] [Nội dung ticket]` （Ví dụ: `refs bug #1234 Sửa lỗi cache`）。
-* Tại môi trường local(trên máy lập trình viên), tuyệt đối không được thay đổi code khi ở branch master。Nhất định phải thao tác trên branch khởi tạo để làm task。
+### 1.2 Các nhánh hỗ trợ
 
-### Chuẩn bị
+* Features branches
+    * Được checkout từ develop
+    * Được merge vào develop
+    * Quy tắc đặt tên:
+    * Các nhánh này được sử dụng để phát triển các tính năng mới để phục vụ cho các bản realease sau này. Mỗi tính năng sẽ là một nhánh riêng và được checkout từ develop sau đó sẽ được merge vào develop
 
-1. Trên Github (Bitbucket), fork Central Repository về tài khoản của mình（repository ở tài khoản của mình sẽ được gọi là Forked Repository）。
+Lưu ý: Các nhánh chính sẽ được bảo vệ để không cho commit trực tiếp lên và tránh đi việc xoá nhầm.
+* Hotfix branches
+    -  Được checkout từ main
+    -  Merge vào develop và main
+    -  Quy tắc đặt tên: hotfix-[số task jira]-[tên]
+    -  Nhánh này được sử dụng để fix những bug được phát hiện sau khi sản phẩm đã lên môi trường production và đang phát triển tính năng mới cho bản release sau và những bug này bắt buộc phải fix ngay. Một branch hotfix sẽ được checkout ra từ nhánh main để fixbug và release sau đó nhánh này sẽ được merge vào develop và main. 
 
-2. Clone (tạo bản sao) Forked Repository ở môi trường local。Tại thời điểm này, Forked Repository sẽ được tự động đăng ký dưới tên là `origin`。
+Chú ý: Các nhánh hỗ trợ có thể được xoá đi sau khi hoàn thành xong nhiệm vụ của nó
+
+## 2. Flow sử dụng git
+### 2.1 Flow làm việc cho developer
+1. Clone repository từ github
     ```sh
-    $ git clone [URL của Forked Repository]
+    $ git clone [URL của remote repository]
     ```
+   
+  2. Truy cập vào local repository trên máy
+     ```sh
+     $ cd [Đường dẫn của folder vừa clone ở mục 1]
+     ```
+     
+   3. Thực hiện checkout sang nhánh develop
+       ```sh
+       $ git checkout develop
+       ```
+   
+   4. Sau khi nhận task, để bắt đầu làm việc thì tiến hành việc tạo feature branch để làm tassk
+       ```sh
+       $ git checkout -b [Tên branch]
+       ```
+   Lưu ý: Mỗi task chỉ tạo một branch duy nhất để làm việc, mối quan hệ giữa task và branch là mối quan hệ 1:1
+   
+   5. Tiến hành làm task, trong quá trình làm task có thể tạo bao nhiêu commit tuỳ ý
+   Cách tạo commit
+       ```
+       // Để tạo commit trước hết ta cần add các file vào index, ta có thể add thủ công từng file hoặc add tất cả bằng câu lệnh sau:
+       $ git add -A 
+       hoặc
+       $ git add .
+       
+       // Tạo commit
+       $ git commit  -m "[Commit message]"
+       ```
+6.  Sau khi làm xong task sẽ tiến hành tạo push và tạo pull request
 
-3. Truy cập vào thư mục đã được tạo ra sau khi clone, đăng ký Central Repository dưới tên `upstream`。
+    Lưu ý rằng mỗi pull request chỉ nên có một commit duy nhất, nếu trong quá trình làm tạo ra nhiều commit thì phải gộp các commit lại   thành một commit và đặt tên theo quy tắc sau : `[ID task][Loại task] [Mô tả ngắn gọn về việc mà commit này làm]` , ví dụ: `[SCP-120][Task] Implement home screen`
+    
+    Trước khi push lên phải đảm bảo code trên branch phải là code mới nhất từ develop, ta thực hiện như sau:
+    ```
+    // Checkout sang develop
+    $ git checkout develop
+    //Pull từ develop về
+    $ git pull origin develop
+    // Checkout về lại về branch đang làm việc
+    $ git checkout [tên branch]
+    // Rebase branch với develop
+    $ git rebase develop
+    ```
+    Quá trình rebase có thể xảy ra conflict xem phần sau để biết cách giải quyết
+    
+    Để  push branch lên remote repository làm như sau:
     ```sh
-    $ cd [thư mục được tạo ra]
-    $ git remote add upstream [URL của Central Repository]
+    $ git push origin [tên branch]
     ```
-
-### Quy trình
-
-Từ đây, Central Repository và Forked Repository sẽ được gọi lần lượt là `upstream` và `origin`。
-
-1. Đồng bộ hóa branch master tại local với upstream。
+    
+    Trong trường hợp branch đã từng được push lên trước đó và muốn push đè lên thì phỉa force push
     ```sh
-    $ git checkout master
-    $ git pull upstream master
+    $ git push origin [tên branch] -f
+     ```
+     
+     Sau khi tạo pull thì gửi link pull request vào nhóm dự án để leader review và merge, không được tự ý merge vào develop
+     
+     Khi có comment từ leader cần phải sửa thì tiến hành sửa code sau đó thực việc add, commit, push lại
+     
+     ```
+     $ git add -A
+     $ git commit --amend -m "[commit message]"
+     // Trong trường hợp không muốn thay đổi commit message có thể sử dụng câu lệnh sau để tránh việc gõ lại commit message
+     $ git commit --amend --no-edit
+     ```
+     
+### 2.2 Flow làm việc cho leader.
+* Sau khi thành viên gửi pull request leader sẽ review và merge vào nhánh develop trên github. Trước khi merge leader có thể lấy code về chạy thử bằng cách
     ```
-
-2. Tạo branch để làm task từ branch master ở local. Tên branch là số ticket của task（Ví dụ: `task/1234`）。
-    ```sh
-    $ git checkout master # <--- Không cần thiết nếu đang ở trên branch master
-    $ git checkout -b task/1234
+    $ git fetch origin [tên branch]
+    $ git checkout [tên branch]
     ```
+* Sau khi release sản phẩm thì phải thực hiện merge nhánh develop vào nhánh master
+* Khi phát sinh nhánh hotfix thì phải merge nhánh hotfix vào nhánh develop và nhánh master
 
-3. Tiến hành làm task（Có thể commit bao nhiêu tùy ý）。
 
-4. Trường hợp đã tạo nhiều commit trong quá trình làm task、tại 5. trước khi push phải dùng rebase -i để hợp các commit lại thành 1 commit duy nhất。
-    ```sh
-    $ git rebase -i [Giá trị hash của commit trước commit đầu tiên trong quá trình làm task]
-    ```
-
-5. Quay trở về branch master ở local và lấy code mới nhất về
-
-    ```sh
-    $ git checkout master
-    $ git pull upstream master
-    ```
-
-6. Quay trở lại branch làm task, sau đó rebase với branch master。
-
-    ```sh
-    $ git checkout task/1234
-    $ git rebase master
-    ```
-    **Trường hợp xảy ra conflict trong quá trình rebase、hãy thực hiện các thao tác của mục「Khi xảy ra conflict trong quá trình rebase」。**
-
-7. Push code lên origin。
-
-    ```sh
-    $ git push origin task/1234
-    ```
-
-8. Tại origin trên Github（Bitbucket）、từ branch `task/1234` đã được push lên hãy gửi pull-request đối với branch master của upstream.
-
-9. Hãy gửi link URL của trang pull-request cho reviewer trên chatwork để tiến hành review code。
-
-    9.1. Trong trường hợp reviewer có yêu cầu sửa chữa, hãy thực hiện các bước 3. 〜 6.。
-
-    9.2 push -f (push đè hoàn toàn lên code cũ) đối với remote branch làm task。
-    ```sh
-    $ git push origin task/1234 -f
-    ```
-
-    9.3 Tiếp tục gửi lại URL cho reviewer trên chatwork để tiến hành việc review code。
-
-10. Nếu trên 2 người reviewer đồng ý với pull-request, người reviewer cuối cùng sẽ thực hiện việc merge pull-request。
-11. Quay trở lại 1。
-
-### Khi xảy ra conflict trong quá trình rebase
+## 3. Xử lý conflict
 
 Khi xảy ra conflict trong quá trình rebase, sẽ có hiển thị như dưới đây (tại thời điểm này sẽ bị tự động chuyển về một branch vô danh)
 ```sh
@@ -115,6 +135,6 @@ Trong trường hợp muốn dừng việc rebase lại, hãy dùng lệnh `git 
 2. Khi đã giải quyết được tất cả các conflict, tiếp tục thực hiện việc rebase bằng:
 
     ```sh
-    $ git add .
+    $ git add -A
     $ git rebase --continue
     ```
